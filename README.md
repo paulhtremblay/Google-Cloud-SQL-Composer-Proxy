@@ -35,6 +35,11 @@ Click on your instance:
 Click on "Environment Configuration"
 
 <img src="https://github.com/paulhtremblay/Google-Cloud-SQL-Composer-Proxy/blob/development/images/choose_env_config.jpg?raw=true" alt="env-config"/>
+
+Scroll down until you see the section "GKE Cluster". You cluster name is the string after the word "/clusters/"
+
+<img src="https://github.com/paulhtremblay/Google-Cloud-SQL-Composer-Proxy/blob/development/images/composer_cluster_name.jpg?raw=true" alt="env-config"/>
+
  
 
 https://medium.com/nerd-for-tech/connecting-gcp-composer-to-cloud-sql-via-proxy-305743a388a
