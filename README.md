@@ -46,7 +46,7 @@ gcloud components install gke-gcloud-auth-plugin
   * `service_account` can be anything
   * `project_id` project id
 
-4. Run python scripts/create.py <path to config> -v 3
+4. Run python scripts/create.py `<path to config>` -v 3
 
 
 Testing
