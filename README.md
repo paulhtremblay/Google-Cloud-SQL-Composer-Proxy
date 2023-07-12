@@ -40,23 +40,50 @@ Scroll down until you see the section "GKE Cluster". You cluster name is the str
 
 <img src="https://github.com/paulhtremblay/Google-Cloud-SQL-Composer-Proxy/blob/development/images/composer_cluster_name.jpg?raw=true" alt="env-config"/>
 
- 
+This will be used in the config.ini file (see the examples), as well as for connecting to the cluster.
 
-https://medium.com/nerd-for-tech/connecting-gcp-composer-to-cloud-sql-via-proxy-305743a388a
+In addtion, get the region name. In this case, it is "us-west2"
+
+2. Install the kubectl client:
+``` bash
+gcloud components install gke-gcloud-auth-plugin
+
+3. Create a config.ini file. See the examples
+
+4. Run python scripts/create.py <path to config> -v 3
 
 
-FOR SCRIPT
+
+Testing
 ==========
-1. gcloud components install gke-gcloud-auth-plugin
-2. get cluster name from gui; get region name from gui
-3. create a service account in console dedicated to this task. Assign it Cloud SQL Client IAM role 
 
-https://stackoverflow.com/questions/50154306/google-cloud-composer-and-google-cloud-sql
+Get the identity of the worker pod (where composer has the workers, and where the connection to sql must exist):
 
-Check that the pod was created kubectl get pods --all-namespaces
+```bash
+kubectl get pods --all-namespaces
+```
 
-Check that the service was created kubectl get services --all-namespaces
+In the second column, look for a  name that is something like:  airflow-worker-xxxx. Note the name and the namespace for step 3
 
-Jump into a worker node kubectl --namespace=composer-1-6-1-airflow-1-10-1-<some-uid> exec -it airflow-worker-<some-uid> bash
 
-Test mysql connection mysql -u composer -p --host <service-name>.default.svc.cluster.local
+2. Check that the service was created 
+
+```bash
+kubectl get services --all-namespaces
+```
+
+You should see your service
+
+3. connect to the worker pod: 
+
+```bash
+kubectl --namespace=<from step1> exec -it <from step 1>  bash
+
+```
+
+For postgres
+
+```
+psql -h <service-name>.default.svc.cluster.local --user <user> 
+```
+

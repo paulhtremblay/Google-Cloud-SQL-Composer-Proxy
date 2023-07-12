@@ -44,6 +44,58 @@ def _run_subprocess(args):
         raise CreateProxyError(result.stderr.decode('utf8'))
     return result
 
+def connect_to_cluster(cluster_name, region, verbose = 0):
+    args = ['gcloud', 'container', 'clusters', 
+            'get-credentials', cluster_name,
+            '--region', region] 
+    if verbose > 2:
+        _print_args(args)
+    result = _run_subprocess(args)
+    if verbose > 0:
+        print(result.stderr.decode('utf8'))
+        print(result.stdout.decode('utf8'))
+
+def _run_subprocess_service_accout_create(service_account, display_name = None, 
+                                          verbose = 0):
+    if display_name == None:
+        display_name = service_account
+    args = ['gcloud', 'iam', 'service-accounts', 'create',service_account, 
+        '--display-name', display_name
+        ]
+    if verbose > 2:
+        _print_args(args)
+    result = subprocess.run(args, capture_output=True)
+    allowed = [f'is the subject of a conflict: Service account {service_account} already exists within project']
+    if result.returncode != 0:
+        if verbose > 2:
+            print('Found error in creating account\n')
+        for msg in allowed:
+            if msg in result.stderr.decode('utf8'):
+                if verbose > 0:
+                    print(f'account {service_account} exists already')
+                return result
+        raise CreateProxyError(result.stderr.decode('utf8'))
+    elif verbose > 0:
+        print(f'created service account {service_account}')
+
+
+def create_gsa_service_account(service_account, display_name = None, verbose = 0,
+                               ):
+    result = _run_subprocess_service_accout_create(service_account = service_account, 
+                                          display_name = display_name, 
+                                          verbose = verbose)
+
+def create_permissions_for_gsa_service_acct(project, service_account, verbose = 0,):
+    args = ['gcloud', 'projects', 'add-iam-policy-binding', project,
+      '--member', f"serviceAccount:{service_account}@{project}.iam.gserviceaccount.com",
+      '--role', "roles/cloudsql.client", '--condition', 'None'
+            ]
+    if verbose > 2:
+        _print_args(args)
+    result = _run_subprocess(args)
+    if verbose > 0:
+        print('updated gsa service account')
+
 def create_service_account(work_dir, ksa_name, verbose = 0,
                            just_yaml = False):
     if verbose >1:
@@ -57,9 +109,14 @@ def create_service_account(work_dir, ksa_name, verbose = 0,
         if verbose:
             print(f'created yaml file "{ser_path}"')
         return
+    if verbose > 2:
+        _print_args(args)
     result = _run_subprocess(args = args)
     if verbose > 0:
         print(f'created KSA service "{ksa_name}"')
+
+def _print_args(args):
+    print('running ' + ' '.join(args))
 
 def create_workload_identity(cluster_name, project_id, region_name,
                              verbose = 0):
@@ -69,6 +126,9 @@ def create_workload_identity(cluster_name, project_id, region_name,
             '--region', region_name,
             cluster_name, '--workload-pool', f'{project_id}.svc.id.goog'
             ]
+    if verbose > 2:
+        _print_args(args)
+
     result = _run_subprocess(args = args)
     if verbose > 0:
         print(f'created workload identity for project "{project_id}" and cluster "{cluster_name}"')
@@ -83,8 +143,7 @@ def bind_ksa_gsa(project_id, ksa_name, service_account,
             service_account
             ]
     if verbose > 2:
-        print('args are')
-        print(args)
+        _print_args(args)
 
     result = _run_subprocess(args = args)
     if verbose > 0:
@@ -99,8 +158,7 @@ def annotate_ksa(ksa_name, service_account, verbose = 0):
             f'iam.gke.io/gcp-service-account={service_account}',
             ]
     if verbose > 2:
-        print('args are')
-        print(args)
+        _print_args(args)
 
     result = subprocess.run(args, capture_output=True)
     if result.returncode != 0:
@@ -129,6 +187,8 @@ def create_kubetcl_secret(db_secret_name,
                 PW= os.environ['PROXY_DB_PASSWORD']),
             '--from-literal',f'database={db_name}'
             ]
+    if verbose > 2:
+        _print_args(args)
     result = subprocess.run(args, capture_output=True)
     if result.returncode != 0:
         already_exists = f'secrets "{db_secret_name}" already exists'
@@ -184,7 +244,11 @@ def create_sidecar(work_dir,
     if just_yaml:
         print(f'created yaml "{side_path}"')
         return
+    if verbose > 0:
+        print(f'created yaml "{side_path}"')
     args = ['kubectl', 'apply', '-f',  side_path]  
+    if verbose >2:
+        _print_args(args)
     result = _run_subprocess(args = args)
     if verbose > 0:
         print(f'created sidecar')
@@ -212,6 +276,8 @@ def create_service(work_dir,
         print(f'created yaml "{path}"')
         return
     args = ['kubectl', 'apply', '-f',  path]  
+    if verbose > 2:
+        _print_args(args)
     result = _run_subprocess(args = args)
     if verbose > 0:
         print(f'created service')
@@ -251,9 +317,19 @@ def just_yaml(config_path, verbose):
 def main(config_path, verbose):
     configs = get_configs(path = config_path)
     work_dir = make_work_dir(config_path = config_path)
+    create_gsa_service_account( service_account = configs['service_account'], 
+                               display_name = None, verbose = verbose)
+    create_permissions_for_gsa_service_acct(project = configs['project_id'],
+                                            service_account = configs['service_account'], 
+                                            verbose = verbose
+                                            )
     create_service_account(work_dir = work_dir, 
             ksa_name = configs['ksa_name'],verbose = verbose
                            )
+
+    connect_to_cluster(cluster_name = configs['cluster_name'], 
+                                              region = configs['region_name'],
+                       verbose = verbose)
     create_kubetcl_secret(db_secret_name = configs['db_secret_name'],
                           db_user_name = configs['db_user_name'],
                           db_name = configs['db_name'],
@@ -268,11 +344,11 @@ def main(config_path, verbose):
 
     bind_ksa_gsa(project_id = configs['project_id'], 
                             ksa_name = configs['ksa_name'], 
-                            service_account = configs['service_account'], 
+                            service_account = configs['service_account'] + '@' + configs['project_id'] + '.iam.gserviceaccount.com',
                             verbose = verbose)
 
     annotate_ksa(ksa_name = configs['ksa_name'], 
-                     service_account = configs['service_account'], 
+                     service_account = configs['service_account'] + '@' + configs['project_id'] + '.iam.gserviceaccount.com' , 
                      verbose = verbose)
     create_sidecar(work_dir = work_dir,
                     deployment_name = configs['deployment_name'], 
