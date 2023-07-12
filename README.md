@@ -47,6 +47,7 @@ In addtion, get the region name. In this case, it is "us-west2"
 2. Install the kubectl client:
 ``` bash
 gcloud components install gke-gcloud-auth-plugin
+```
 
 3. Create a config.ini file. See the examples
 
@@ -55,7 +56,7 @@ gcloud components install gke-gcloud-auth-plugin
 
 
 Testing
-==========
+=======
 
 Get the identity of the worker pod (where composer has the workers, and where the connection to sql must exist):
 
