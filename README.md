@@ -13,7 +13,7 @@ Quick Creation
 
 If you create a proper ini file, you can simply run:
 
-```
+```bash
 python create.py <path-to-ini file>
 
 ```
