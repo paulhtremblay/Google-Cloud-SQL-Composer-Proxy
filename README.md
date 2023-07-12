@@ -34,8 +34,17 @@ gcloud components install gke-gcloud-auth-plugin
 
 3. Create a config.ini file. See the examples
 
-  * do
-  *  xx
+  * `ksa_name` can be anthing you want
+  *  `cluster_name` the name of the cluster
+  *  `region_name` name of region id of your cluster
+  * `deployment_name` can be anyting
+  * `db_secret_name` can be anyting
+  * `db_port` port of instance
+  * `instance_connection_name` the name of your Cloud SQL instance, found in GCP console
+  * `db_name` the name of db you are connecting to
+  * `db_user_name` the name of db user you are connecting to
+  * `service_account` can be anything
+  * `project_id` project id
 
 4. Run python scripts/create.py <path to config> -v 3
 
