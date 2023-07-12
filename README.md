@@ -24,25 +24,8 @@ have created a proper config file
 Detailed Creation
 ----------------
 
-1. Get the name of your Compser cluster. This can be found by going the GCP console, and choosing composer
+1. Get the name of your Compser cluster. See the section below if you don't know this.
 
-<img src="https://github.com/paulhtremblay/Google-Cloud-SQL-Composer-Proxy/blob/development/images/choose_composer.jpg?raw=true" alt="choose" width="200"/>
-
-Click on your instance:
-
-<img src="https://github.com/paulhtremblay/Google-Cloud-SQL-Composer-Proxy/blob/development/images/click_composer.jpg?raw=true" alt="click"/>
-
-Click on "Environment Configuration"
-
-<img src="https://github.com/paulhtremblay/Google-Cloud-SQL-Composer-Proxy/blob/development/images/choose_env_config.jpg?raw=true" alt="env-config"/>
-
-Scroll down until you see the section "GKE Cluster". You cluster name is the string after the word "/clusters/"
-
-<img src="https://github.com/paulhtremblay/Google-Cloud-SQL-Composer-Proxy/blob/development/images/composer_cluster_name.jpg?raw=true" alt="env-config"/>
-
-This will be used in the config.ini file (see the examples), as well as for connecting to the cluster.
-
-In addtion, get the region name. In this case, it is "us-west2"
 
 2. Install the kubectl client:
 ``` bash
@@ -51,8 +34,10 @@ gcloud components install gke-gcloud-auth-plugin
 
 3. Create a config.ini file. See the examples
 
-4. Run python scripts/create.py <path to config> -v 3
+  1. do
+  2. xx
 
+4. Run python scripts/create.py <path to config> -v 3
 
 
 Testing
@@ -87,4 +72,25 @@ For postgres
 ```
 psql -h <service-name>.default.svc.cluster.local --user <user> 
 ```
+
+Getting Cluster Name
+=====================
+
+<img src="https://github.com/paulhtremblay/Google-Cloud-SQL-Composer-Proxy/blob/development/images/choose_composer.jpg?raw=true" alt="choose" width="200"/>
+
+Click on your instance:
+
+<img src="https://github.com/paulhtremblay/Google-Cloud-SQL-Composer-Proxy/blob/development/images/click_composer.jpg?raw=true" alt="click"/>
+
+Click on "Environment Configuration"
+
+<img src="https://github.com/paulhtremblay/Google-Cloud-SQL-Composer-Proxy/blob/development/images/choose_env_config.jpg?raw=true" alt="env-config"/>
+
+Scroll down until you see the section "GKE Cluster". You cluster name is the string after the word "/clusters/"
+
+<img src="https://github.com/paulhtremblay/Google-Cloud-SQL-Composer-Proxy/blob/development/images/composer_cluster_name.jpg?raw=true" alt="env-config"/>
+
+This will be used in the config.ini file (see the examples), as well as for connecting to the cluster.
+
+In addtion, get the region name. In this case, it is "us-west2"
 
