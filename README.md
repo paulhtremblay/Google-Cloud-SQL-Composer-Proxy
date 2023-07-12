@@ -34,8 +34,8 @@ gcloud components install gke-gcloud-auth-plugin
 
 3. Create a config.ini file. See the examples
 
-  1. do
-  2. xx
+  * do
+  *  xx
 
 4. Run python scripts/create.py <path to config> -v 3
 
