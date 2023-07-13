@@ -24,7 +24,7 @@ gcloud components install gke-gcloud-auth-plugin
   * `ksa_name` can be anything you want
   *  `cluster_name` the name of the cluster
   *  `region_name` name of region id of your cluster
-  * `deployment_name` can be anyting
+  * `deployment_name` can be anyhting
   * `db_secret_name` Optional, only if you need to create a kubernetes secret; can be anyting
   * `db_name` Optional, only use if creating a kuberntes secret; the name of db you are connecting to
   * `db_user_name` Optional, only use if creating a kuberntes secret; the name of db user you are connecting to
