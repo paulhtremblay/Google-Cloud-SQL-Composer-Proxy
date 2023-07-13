@@ -16,15 +16,9 @@ def _get_args():
     parser.add_argument('path')
     parser.add_argument('--verbose', '-v', help = 'verbosity level', type = int, default = 0)
     parser.add_argument('--yaml', '-y', help = 'just create yaml', action = 'store_true')
+    parser.add_argument('--use-secret', '-s', help = 'create db secret', action = 'store_true')
     return  parser.parse_args()
 
-def get_yaml_service(path):
-    """
-    helper function
-    """
-    with open(path, 'r') as read_obj:
-        d = yaml.safe_load(read_obj)
-    pp.pprint(d)
 
 def get_configs(path):
     config = configparser.ConfigParser()
@@ -201,8 +195,94 @@ def create_kubetcl_secret(db_secret_name,
     if verbose > 0:
         print(f'created secret for {db_secret_name}, for user {db_user_name} and database {db_name}')
 
+def _get_sidecar_dict(work_dir,
+                    deployment_name, 
+                   cluster_name,
+                   db_secret_name,
+                   db_port,
+                   instance_connection_name,
+                   ksa_name,
+                   use_secret,
+                   verbose = 0):
+    if use_secret:
+        return  {   'apiVersion': 'apps/v1',
+    'kind': 'Deployment',
+    'metadata': {'name': deployment_name},
+    'spec': {   'selector': {'matchLabels': {'app': cluster_name}},
+                'template': {   'metadata': {   'labels': {   'app': cluster_name}},
+                                'spec': {   'containers': [   {   'args': [   '--structured-logs',
+                                                                              '--address=0.0.0.0',
+                                                                              f'--port={db_port}',
+                                                                              instance_connection_name],
+                                                                  'env': [   {   'name': 'DB_USER',
+                                                                                 'valueFrom': {   'secretKeyRef': {   'key': 'username',
+                                                                                                                      'name': db_secret_name}}},
+                                                                             {   'name': 'DB_PASS',
+                                                                                 'valueFrom': {   'secretKeyRef': {   'key': 'password',
+                                                                                                                      'name': db_secret_name}}},
+                                                                             {   'name': 'DB_NAME',
+                                                                                 'valueFrom': {   'secretKeyRef': {   'key': 'database',
+                                                                                                                      'name': db_secret_name}}}],
+                                                                  'image': 'gcr.io/cloud-sql-connectors/cloud-sql-proxy:2.1.0',
+                                                                  'name': 'cloud-sql-proxy',
+                                                                  'resources': {   'requests': {   'cpu': '1',
+                                                                                                   'memory': '2Gi'}},
+                                                                  'securityContext': {   'runAsNonRoot': True}}],
+                                            'serviceAccountName': ksa_name}}}}
+    return  {   'apiVersion': 'apps/v1',
+    'kind': 'Deployment',
+    'metadata': {'name': deployment_name},
+    'spec': {   'selector': {   'matchLabels': {   'app': cluster_name}},
+                'template': {   'metadata': {   'labels': {   'app': cluster_name}},
+                                'spec': {   'containers': [   {   'args': [   '--structured-logs',
+                                                                              '--address=0.0.0.0',
+                                                                              f'--port={db_port}',
+                                                                              instance_connection_name],
+                                                                  'image': 'gcr.io/cloud-sql-connectors/cloud-sql-proxy:2.1.0',
+                                                                  'name': 'cloud-sql-proxy',
+                                                                  'resources': {   'requests': {   'cpu': '1',
+                                                                                                   'memory': '2Gi'}},
+                                                                  'securityContext': {   'runAsNonRoot': True}}],
+                                            'serviceAccountName': 'composer-ksa'}}}}
 
 def create_sidecar(work_dir,
+                    deployment_name, 
+                   cluster_name,
+                   db_secret_name,
+                   db_port,
+                   instance_connection_name,
+                   ksa_name,
+                   use_secret = False,
+                   just_yaml = False,
+                   verbose = 0):
+    d = _get_sidecar_dict(work_dir = work_dir,
+                      deployment_name = deployment_name,
+                      cluster_name = cluster_name,
+                      db_secret_name = db_secret_name,
+                      db_port = db_port,
+                      instance_connection_name = instance_connection_name,
+                      ksa_name = ksa_name,
+                      use_secret = use_secret,
+                      verbose = verbose
+                      )
+    side_path = os.path.join(work_dir, 'proxy_with_workload_identity.yaml')
+    with open(side_path, 'w') as write_obj:
+        yaml.dump(d, write_obj)
+    if just_yaml:
+        print(f'created yaml "{side_path}"')
+        return
+    if verbose > 0:
+        print(f'created yaml "{side_path}"')
+    args = ['kubectl', 'apply', '-f',  side_path]  
+    if verbose >2:
+        _print_args(args)
+    result = _run_subprocess(args = args)
+    if verbose > 0:
+        print(f'created sidecar')
+        print(result.stdout.decode('utf8'))
+
+
+def create_sidecar_old(work_dir,
                     deployment_name, 
                    cluster_name,
                    db_secret_name,
@@ -282,6 +362,10 @@ def create_service(work_dir,
     if verbose > 0:
         print(f'created service')
         print(result.stdout.decode('utf8'))
+    print('===========================================================')
+    print('host for connection is:')
+    print(f'{deployment_name}-service.default.svc.cluster.local')
+    print('===========================================================')
 
 def make_work_dir(config_path, work_dir = None):
     if not work_dir:
@@ -314,7 +398,7 @@ def just_yaml(config_path, verbose):
                    just_yaml = True,
                    verbose = verbose)
 
-def main(config_path, verbose):
+def main(config_path, verbose, use_secret):
     configs = get_configs(path = config_path)
     work_dir = make_work_dir(config_path = config_path)
     create_gsa_service_account( service_account = configs['service_account'], 
@@ -330,11 +414,12 @@ def main(config_path, verbose):
     connect_to_cluster(cluster_name = configs['cluster_name'], 
                                               region = configs['region_name'],
                        verbose = verbose)
-    create_kubetcl_secret(db_secret_name = configs['db_secret_name'],
-                          db_user_name = configs['db_user_name'],
-                          db_name = configs['db_name'],
-                          verbose = verbose
-                          )
+    if use_secret:
+        create_kubetcl_secret(db_secret_name = configs['db_secret_name'],
+                              db_user_name = configs['db_user_name'],
+                              db_name = configs['db_name'],
+                              verbose = verbose
+                              )
     create_workload_identity(cluster_name = configs['cluster_name'],
                              project_id = configs['project_id'],
                              region_name = configs['region_name'],
@@ -353,10 +438,11 @@ def main(config_path, verbose):
     create_sidecar(work_dir = work_dir,
                     deployment_name = configs['deployment_name'], 
                    cluster_name = configs['cluster_name'],
-                   db_secret_name = configs['db_secret_name'],
+                   db_secret_name = configs.get('db_secret_name'),
                    db_port = configs['db_port'],
                    instance_connection_name = configs['instance_connection_name'],
                    ksa_name = configs['ksa_name'],
+                   use_secret = use_secret,
                    verbose = verbose)
 
     create_service(work_dir,
@@ -370,4 +456,4 @@ if __name__ == '__main__':
     if args.yaml:
         just_yaml(config_path = args.path, verbose = args.verbose)
     else:
-        main(config_path = args.path, verbose = args.verbose)
+        main(config_path = args.path, verbose = args.verbose, use_secret= args.use_secret)

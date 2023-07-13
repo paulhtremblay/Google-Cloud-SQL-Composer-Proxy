@@ -5,24 +5,11 @@ See: [Connect from Google Kubernetes Engine ](https://cloud.google.com/sql/docs/
 Unfortunately, these instructions are hard to follow, and misleading, and probably inaccurate as well. There are also several blogs on how to do this, but these
 seem outdated. Recent versions of Composer use namespaces in kubernetes, so much of the documentation (including that from Google itself) will not work.
 
-Outline
-=======
+The script will create a sql proxy connection for workload identity with the sidecar pattern. 
 
-Quick Creation
--------------
-
-If you create a proper ini file, you can simply run:
-
-```bash
-python create.py <path-to-ini file>
-
-```
-
-This assumes you are already connected to the Composer cluster, you have created the service account with the right permissions, and 
-have created a proper config file
 
 Detailed Creation
-----------------
+=================
 
 1. Get the name of your Compser cluster. See the section below if you don't know this.
 
@@ -38,7 +25,7 @@ gcloud components install gke-gcloud-auth-plugin
   *  `cluster_name` the name of the cluster
   *  `region_name` name of region id of your cluster
   * `deployment_name` can be anyting
-  * `db_secret_name` can be anyting
+  * `db_secret_name` Optional, only if you need to create a kubernetes secret; can be anyting
   * `db_port` port of instance
   * `instance_connection_name` the name of your Cloud SQL instance, found in GCP console
   * `db_name` the name of db you are connecting to
@@ -46,7 +33,9 @@ gcloud components install gke-gcloud-auth-plugin
   * `service_account` can be anything
   * `project_id` project id
 
-4. Run python scripts/create.py `<path to config>` -v 3
+4. Run python scripts/create.py `<path to config>` 
+  * use the -v option for verbosity. Default is no messaging. Use 1, 2, or 3 for more verbosity
+  * use the -s or --use-secret if you want to create s kubernetes secret
 
 
 Testing
