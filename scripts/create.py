@@ -243,7 +243,7 @@ def _get_sidecar_dict(work_dir,
                                                                   'resources': {   'requests': {   'cpu': '1',
                                                                                                    'memory': '2Gi'}},
                                                                   'securityContext': {   'runAsNonRoot': True}}],
-                                            'serviceAccountName': 'composer-ksa'}}}}
+                                            'serviceAccountName': ksa_name}}}}
 
 def create_sidecar(work_dir,
                     deployment_name, 
